@@ -1,0 +1,13 @@
+%!PS
+<< /PageSize [288 432] >> setpagedevice
+4 setlinewidth 6 6 276 420 rectstroke
+/Helvetica-Bold findfont 28 scalefont setfont
+20 380 moveto (TOP - Helett H30C) show
+/Helvetica findfont 16 scalefont setfont
+20 340 moveto (Linux CUPS + TSPL driver) show
+20 315 moveto (203 dpi test label) show
+% fake barcode
+0 1 60 { dup 4 mul 30 add 150 moveto 0 120 rlineto (x) pop dup 3 mod 0 eq {3} {1.5} ifelse setlinewidth stroke pop } for
+/Helvetica-Bold findfont 22 scalefont setfont
+20 40 moveto (BOTTOM) show
+showpage

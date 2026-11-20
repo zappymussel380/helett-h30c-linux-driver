@@ -1,0 +1,166 @@
+#!/usr/bin/python3 -I
+"""
+labelcrop - CUPS prefilter (application/pdf -> application/pdf) for the label printer.
+
+ONLY touches iCarry shipping labels: a page containing the iCarry label text
+("Ship To:", "AWB", "Contents:", "From:") that is either A4/Letter, or where the
+label covers < 50% of the page (Windows/iOS already shrank the A4 onto 4x6). iCarry has no 4x6 option
+and puts the label in the top ~40% of an A4 page; this finds the printed area,
+crops away the blank paper, rotates 90 degrees if that fills the label better and
+scales it onto the label size. Stays vector, so barcodes stay sharp.
+
+Everything else (Shiprocket 4x6 PDFs, Word documents, ...) passes through untouched.
+Disable per job with:  -o AutoCrop=False
+On any error the input is passed through unchanged.
+"""
+import io, os, re, shutil, subprocess, sys, tempfile
+
+PAD_PT = 4            # white border kept around detected content
+DPI = 100             # detection resolution
+ICARRY_MARKERS = ("Ship To:", "AWB", "Contents:", "From:")
+DEFAULT_LABEL = (288.0, 432.0)  # 4 x 6 in
+SHRUNK_FILL = 0.5     # label covering < 50% of a non-A4 page = shrunk iCarry A4
+
+
+def log(level, msg):
+    print(f"{level}: labelcrop: {msg}", file=sys.stderr, flush=True)
+
+
+def job_options(argv):
+    opts = {}
+    for opt in argv[5].split() if len(argv) > 5 else []:
+        k, _, v = opt.partition("=")
+        opts[k] = v if v else "True"
+    return opts
+
+
+def autocrop_enabled(opts):
+    val = None
+    try:
+        with open(os.environ.get("PPD", ""), encoding="latin-1") as f:
+            for line in f:
+                if line.startswith("*DefaultAutoCrop:"):
+                    val = line.split(":", 1)[1].strip()
+    except OSError:
+        pass
+    if "noAutoCrop" in opts:
+        val = "False"
+    val = opts.get("AutoCrop", val)
+    return (val or "True").lower() in ("true", "yes", "on", "1")
+
+
+def label_size(opts):
+    """Target label size in points, from the job's PageSize/media (w288h432 style)."""
+    for key in ("PageSize", "media", "PageRegion"):
+        m = re.search(r"w(\d+(?:\.\d+)?)h(\d+(?:\.\d+)?)", opts.get(key, ""))
+        if m:
+            return float(m[1]), float(m[2])
+    return DEFAULT_LABEL
+
+
+def has_icarry_text(pdf_path, page_no):
+    text = subprocess.run(["pdftotext", "-f", str(page_no), "-l", str(page_no), pdf_path, "-"],
+                          capture_output=True, text=True, errors="replace").stdout
+    return all(m in text for m in ICARRY_MARKERS)
+
+
+def is_a4_like(W, H):
+    return W >= 500 and 1.25 <= H / W <= 1.5     # portrait A4 / Letter
+
+
+def content_bbox(pdf_path, page_no, tmpdir):
+    """Return bbox (x0, y0, x1, y1) in pixels (top-left origin) of non-white content."""
+    from PIL import Image, ImageOps
+    out = os.path.join(tmpdir, f"p{page_no}")
+    subprocess.run(["pdftoppm", "-f", str(page_no), "-l", str(page_no), "-r", str(DPI),
+                    "-gray", "-singlefile", pdf_path, out], check=True,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    img = Image.open(out + ".pgm")
+    mask = ImageOps.invert(img).point(lambda p: 255 if p > 40 else 0)
+    return mask.getbbox(), img.size
+
+
+def main(argv):
+    from pypdf import PdfReader, PdfWriter, Transformation
+    from pypdf.generic import RectangleObject
+
+    tmpdir = tempfile.mkdtemp(prefix="labelcrop.")
+    try:
+        src = argv[6] if len(argv) > 6 else os.path.join(tmpdir, "in.pdf")
+        if len(argv) <= 6:
+            with open(src, "wb") as f:
+                shutil.copyfileobj(sys.stdin.buffer, f)
+
+        def passthrough():
+            with open(src, "rb") as f:
+                shutil.copyfileobj(f, sys.stdout.buffer)
+
+        opts = job_options(argv)
+        if not autocrop_enabled(opts):
+            log("DEBUG", "disabled by option")
+            return passthrough()
+
+        try:
+            reader = PdfReader(src)
+            LW, LH = label_size(opts)
+            writer = PdfWriter()
+            changed = 0
+            for i, page in enumerate(reader.pages, start=1):
+                box = page.cropbox
+                W, H = float(box.width), float(box.height)
+                if page.rotation % 360 or not has_icarry_text(src, i):
+                    writer.add_page(page)
+                    continue
+                bbox, (pw, ph) = content_bbox(src, i, tmpdir)
+                if bbox is None:
+                    writer.add_page(page)
+                    continue
+                # iCarry A4 as downloaded, or already shrunk onto the label by the
+                # sending OS (Windows/iOS do this) so it covers only part of the page.
+                fill = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1]) / (pw * ph)
+                if not (is_a4_like(W, H) or fill < SHRUNK_FILL):
+                    writer.add_page(page)
+                    continue
+                sx, sy = W / pw, H / ph
+                x0 = float(box.left) + bbox[0] * sx - PAD_PT
+                x1 = float(box.left) + bbox[2] * sx + PAD_PT
+                y0 = float(box.top) - bbox[3] * sy - PAD_PT
+                y1 = float(box.top) - bbox[1] * sy + PAD_PT
+                cw, ch = x1 - x0, y1 - y0
+
+                s_up = min(LW / cw, LH / ch)
+                s_rot = min(LW / ch, LH / cw)
+                rotate = s_rot > s_up * 1.1
+                s = s_rot if rotate else s_up
+                t = Transformation().translate(-x0, -y0)
+                if rotate:
+                    t = t.rotate(90).translate(ch, 0)   # 90 deg CCW, back into positive space
+                    fw, fh = ch * s, cw * s
+                else:
+                    fw, fh = cw * s, ch * s
+                t = t.scale(s, s).translate((LW - fw) / 2, (LH - fh) / 2)
+                page.add_transformation(t)
+                page.mediabox = page.cropbox = RectangleObject([0, 0, LW, LH])
+                for k in ("/TrimBox", "/BleedBox", "/ArtBox"):
+                    if k in page:
+                        del page[k]
+                writer.add_page(page)
+                changed += 1
+                log("INFO", f"page {i}: iCarry label detected - cropped {cw:.0f}x{ch:.0f}pt, "
+                            f"{'rotated, ' if rotate else ''}scaled x{s:.2f} onto {LW:.0f}x{LH:.0f}pt")
+
+            if not changed:
+                return passthrough()
+            buf = io.BytesIO()
+            writer.write(buf)
+            sys.stdout.buffer.write(buf.getvalue())
+        except Exception as e:  # never lose a job because of cropping
+            log("WARNING", f"failed ({e!r}), printing unchanged")
+            passthrough()
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv) or 0)

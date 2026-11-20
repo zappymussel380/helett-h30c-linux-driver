@@ -1,0 +1,183 @@
+*PPD-Adobe: "4.3"
+*% Helett H30C Lite (4BARCODE 4B-2054N) - TSPL via open rastertotspl filter.
+*% Page sizes/options derived from the vendor 4B-2054N.ppd (Mac driver v3.13.12).
+*FormatVersion: "4.3"
+*FileVersion: "1.0"
+*LanguageVersion: English
+*LanguageEncoding: ISOLatin1
+*PCFileName: "H30C.PPD"
+*Manufacturer: "Helett"
+*Product: "(H30C Lite)"
+*ModelName: "Helett H30C Lite"
+*ShortNickName: "Helett H30C Lite"
+*NickName: "Helett H30C Lite (TSPL, 203dpi)"
+*1284DeviceID: "MFG:4BARCODE;CMD:TSPL2;MDL:4B-2054N;CLS:PRINTER;"
+*PSVersion: "(3010.000) 0"
+*LanguageLevel: "3"
+*ColorDevice: False
+*DefaultColorSpace: Gray
+*FileSystem: False
+*Throughput: "1"
+*LandscapeOrientation: Plus90
+*TTRasterizer: Type42
+*cupsVersion: 2.4
+*cupsModelNumber: 0
+*cupsManualCopies: False
+*cupsFilter: "application/vnd.cups-raster 0 rastertotspl"
+*cupsPreFilter: "application/pdf 0 labelcrop"
+*cupsSNMPSupplies: False
+*cupsLanguages: "en"
+
+*HWMargins: 0 0 0 0
+*VariablePaperSize: True
+*MaxMediaWidth: "306"
+*MaxMediaHeight: "6480"
+*CustomPageSize True: "pop pop pop <</PageSize[5 -2 roll]/ImagingBBox null>>setpagedevice"
+*ParamCustomPageSize Width: 1 points 36 306
+*ParamCustomPageSize Height: 2 points 18 6480
+*ParamCustomPageSize WidthOffset: 3 points 0 0
+*ParamCustomPageSize HeightOffset: 4 points 0 0
+*ParamCustomPageSize Orientation: 5 int 0 0
+
+*OpenGroup: General/General
+
+*OpenUI *PageSize/Label Size: PickOne
+*OrderDependency: 10 AnySetup *PageSize
+*DefaultPageSize: w288h432
+*PageSize w288h432/4 x 6 in (shipping): "<</PageSize[288 432]/ImagingBBox null>>setpagedevice"
+*PageSize w288h576/4 x 8 in: "<</PageSize[288 576]/ImagingBBox null>>setpagedevice"
+*PageSize w288h288/4 x 4 in: "<</PageSize[288 288]/ImagingBBox null>>setpagedevice"
+*PageSize w288h216/4 x 3 in: "<</PageSize[288 216]/ImagingBBox null>>setpagedevice"
+*PageSize w288h144/4 x 2 in: "<</PageSize[288 144]/ImagingBBox null>>setpagedevice"
+*PageSize w216h144/3 x 2 in: "<</PageSize[216 144]/ImagingBBox null>>setpagedevice"
+*PageSize w144h288/2 x 4 in: "<</PageSize[144 288]/ImagingBBox null>>setpagedevice"
+*PageSize w162h90/2.25 x 1.25 in: "<</PageSize[162 90]/ImagingBBox null>>setpagedevice"
+*PageSize w144h72/2 x 1 in: "<</PageSize[144 72]/ImagingBBox null>>setpagedevice"
+*PageSize w108h72/1.5 x 1 in: "<</PageSize[108 72]/ImagingBBox null>>setpagedevice"
+*PageSize w283h425/100 x 150 mm: "<</PageSize[283 425]/ImagingBBox null>>setpagedevice"
+*CloseUI: *PageSize
+
+*OpenUI *PageRegion/Label Size: PickOne
+*OrderDependency: 10 AnySetup *PageRegion
+*DefaultPageRegion: w288h432
+*PageRegion w288h432/4 x 6 in (shipping): "<</PageSize[288 432]/ImagingBBox null>>setpagedevice"
+*PageRegion w288h576/4 x 8 in: "<</PageSize[288 576]/ImagingBBox null>>setpagedevice"
+*PageRegion w288h288/4 x 4 in: "<</PageSize[288 288]/ImagingBBox null>>setpagedevice"
+*PageRegion w288h216/4 x 3 in: "<</PageSize[288 216]/ImagingBBox null>>setpagedevice"
+*PageRegion w288h144/4 x 2 in: "<</PageSize[288 144]/ImagingBBox null>>setpagedevice"
+*PageRegion w216h144/3 x 2 in: "<</PageSize[216 144]/ImagingBBox null>>setpagedevice"
+*PageRegion w144h288/2 x 4 in: "<</PageSize[144 288]/ImagingBBox null>>setpagedevice"
+*PageRegion w162h90/2.25 x 1.25 in: "<</PageSize[162 90]/ImagingBBox null>>setpagedevice"
+*PageRegion w144h72/2 x 1 in: "<</PageSize[144 72]/ImagingBBox null>>setpagedevice"
+*PageRegion w108h72/1.5 x 1 in: "<</PageSize[108 72]/ImagingBBox null>>setpagedevice"
+*PageRegion w283h425/100 x 150 mm: "<</PageSize[283 425]/ImagingBBox null>>setpagedevice"
+*CloseUI: *PageRegion
+
+*DefaultImageableArea: w288h432
+*ImageableArea w288h432: "0 0 288 432"
+*ImageableArea w288h576: "0 0 288 576"
+*ImageableArea w288h288: "0 0 288 288"
+*ImageableArea w288h216: "0 0 288 216"
+*ImageableArea w288h144: "0 0 288 144"
+*ImageableArea w216h144: "0 0 216 144"
+*ImageableArea w144h288: "0 0 144 288"
+*ImageableArea w162h90: "0 0 162 90"
+*ImageableArea w144h72: "0 0 144 72"
+*ImageableArea w108h72: "0 0 108 72"
+*ImageableArea w283h425: "0 0 283 425"
+*DefaultPaperDimension: w288h432
+*PaperDimension w288h432: "288 432"
+*PaperDimension w288h576: "288 576"
+*PaperDimension w288h288: "288 288"
+*PaperDimension w288h216: "288 216"
+*PaperDimension w288h144: "288 144"
+*PaperDimension w216h144: "216 144"
+*PaperDimension w144h288: "144 288"
+*PaperDimension w162h90: "162 90"
+*PaperDimension w144h72: "144 72"
+*PaperDimension w108h72: "108 72"
+*PaperDimension w283h425: "283 425"
+
+*OpenUI *Resolution/Resolution: PickOne
+*OrderDependency: 20 AnySetup *Resolution
+*DefaultResolution: 203dpi
+*Resolution 203dpi/203 dpi: "<</HWResolution[203 203]/cupsBitsPerColor 8/cupsColorOrder 0/cupsColorSpace 0>>setpagedevice"
+*CloseUI: *Resolution
+
+*CloseGroup: General
+
+*OpenGroup: Media/Media
+
+*OpenUI *PaperType/Media Type: PickOne
+*OrderDependency: 30 AnySetup *PaperType
+*DefaultPaperType: Normal
+*PaperType Normal/Use printer setting (auto-calibrated): ""
+*PaperType LabelGaps/Labels with gaps: ""
+*PaperType LabelMark/Labels with black mark: ""
+*PaperType Continue/Continuous roll: ""
+*CloseUI: *PaperType
+
+*OpenUI *GapsHeight/Gap / Mark Height: PickOne
+*OrderDependency: 30 AnySetup *GapsHeight
+*DefaultGapsHeight: 3
+*GapsHeight 0/0 mm: ""
+*GapsHeight 1/1 mm: ""
+*GapsHeight 2/2 mm: ""
+*GapsHeight 3/3 mm: ""
+*GapsHeight 4/4 mm: ""
+*GapsHeight 5/5 mm: ""
+*CloseUI: *GapsHeight
+
+*CloseGroup: Media
+
+*OpenGroup: PrinterOptions/Printer Options
+
+*OpenUI *Darkness/Darkness: PickOne
+*OrderDependency: 40 AnySetup *Darkness
+*DefaultDarkness: -1
+*Darkness -1/Use printer setting: ""
+*Darkness 4/4 (light): ""
+*Darkness 6/6: ""
+*Darkness 8/8: ""
+*Darkness 10/10: ""
+*Darkness 12/12: ""
+*Darkness 15/15 (darkest): ""
+*CloseUI: *Darkness
+
+*OpenUI *PrintSpeed/Print Speed: PickOne
+*OrderDependency: 40 AnySetup *PrintSpeed
+*DefaultPrintSpeed: Normal
+*PrintSpeed Normal/Use printer setting: ""
+*PrintSpeed 2/2 ips (best quality): ""
+*PrintSpeed 3/3 ips: ""
+*PrintSpeed 4/4 ips: ""
+*PrintSpeed 5/5 ips: ""
+*PrintSpeed 6/6 ips (fastest): ""
+*CloseUI: *PrintSpeed
+
+*OpenUI *Halftone/Black & White Conversion: PickOne
+*OrderDependency: 40 AnySetup *Halftone
+*DefaultHalftone: 170
+*Halftone 128/Sharp - normal: ""
+*Halftone 170/Sharp - bold (labels, default): ""
+*Halftone 210/Sharp - extra bold: ""
+*Halftone Dither/Dither (photos/logos): ""
+*CloseUI: *Halftone
+
+*OpenUI *Rotate180/Rotate 180 degrees: Boolean
+*OrderDependency: 40 AnySetup *Rotate180
+*DefaultRotate180: False
+*Rotate180 True/Yes: ""
+*Rotate180 False/No: ""
+*CloseUI: *Rotate180
+
+*OpenUI *AutoCrop/Auto-crop iCarry A4 labels: Boolean
+*OrderDependency: 40 AnySetup *AutoCrop
+*DefaultAutoCrop: True
+*AutoCrop True/Yes: ""
+*AutoCrop False/No: ""
+*CloseUI: *AutoCrop
+
+*CloseGroup: PrinterOptions
+
+*DefaultFont: Courier

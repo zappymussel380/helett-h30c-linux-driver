@@ -1,0 +1,2 @@
+# Helett H30C Lite (reports as 4BARCODE 4B-2054N) - allow CUPS in an unprivileged LXC to open it via libusb
+SUBSYSTEM=="usb", ATTR{idVendor}=="2d84", ATTR{idProduct}=="b028", MODE="0666"
