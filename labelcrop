@@ -4,7 +4,9 @@ labelcrop - CUPS prefilter (application/pdf -> application/pdf) for the label pr
 
 ONLY touches iCarry shipping labels: a page containing the iCarry label text
 ("Ship To:", "AWB", "Contents:", "From:") that is either A4/Letter, or where the
-label covers < 50% of the page (Windows/iOS already shrank the A4 onto 4x6). iCarry has no 4x6 option
+label covers < 50% of the page (Windows/iOS already shrank the A4 onto 4x6). A page with
+no extractable text at all (Windows Print-to-PDF sometimes outlines every glyph) that is
+< 50% covered is treated the same way. iCarry has no 4x6 option
 and puts the label in the top ~40% of an A4 page; this finds the printed area,
 crops away the blank paper, rotates 90 degrees if that fills the label better and
 scales it onto the label size. Stays vector, so barcodes stay sharp.
@@ -19,7 +21,10 @@ PAD_PT = 4            # white border kept around detected content
 DPI = 100             # detection resolution
 ICARRY_MARKERS = ("Ship To:", "AWB", "Contents:", "From:")
 DEFAULT_LABEL = (288.0, 432.0)  # 4 x 6 in
-SHRUNK_FILL = 0.5     # label covering < 50% of a non-A4 page = shrunk iCarry A4
+SHRUNK_FILL = 0.5
+HF_GAP_PX = 15        # blank rows (at DPI) separating a header/footer line from the label
+HF_EDGE = 0.08        # header/footer must sit in the outer 8% of the page height
+HF_THIN = 0.04        # ...and be thinner than 4% of the page height     # label covering < 50% of a non-A4 page = shrunk iCarry A4
 
 
 def log(level, msg):
@@ -58,10 +63,17 @@ def label_size(opts):
     return DEFAULT_LABEL
 
 
-def has_icarry_text(pdf_path, page_no):
+def page_kind(pdf_path, page_no):
+    """'icarry' if the page has the iCarry label text, 'outlined' if it has no
+    extractable text at all (Windows Print-to-PDF sometimes converts every glyph
+    to vector outlines, so the markers can't be read), else None."""
     text = subprocess.run(["pdftotext", "-f", str(page_no), "-l", str(page_no), pdf_path, "-"],
                           capture_output=True, text=True, errors="replace").stdout
-    return all(m in text for m in ICARRY_MARKERS)
+    if all(m in text for m in ICARRY_MARKERS):
+        return "icarry"
+    if not text.strip():
+        return "outlined"
+    return None
 
 
 def is_a4_like(W, H):
@@ -77,7 +89,56 @@ def content_bbox(pdf_path, page_no, tmpdir):
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     img = Image.open(out + ".pgm")
     mask = ImageOps.invert(img).point(lambda p: 255 if p > 40 else 0)
-    return mask.getbbox(), img.size
+    bbox = mask.getbbox()
+    if bbox is None:
+        return None, img.size
+    W, H = img.size
+    # Drop browser header/footer lines (Firefox/Chrome print the title, URL, page
+    # number and date in the page corners): a thin band of content at the very
+    # top or bottom, separated from the label by blank space. Otherwise they make
+    # the "content" span the whole page and nothing gets cropped.
+    bands, start, gap = [], None, 0
+    for y in range(H):
+        if mask.crop((0, y, W, y + 1)).getbbox():
+            if start is None:
+                start = y
+            gap = 0
+        elif start is not None:
+            gap += 1
+            if gap >= HF_GAP_PX:
+                bands.append((start, y - gap + 1))
+                start, gap = None, 0
+    if start is not None:
+        bands.append((start, H - gap))
+    edge, thin = H * HF_EDGE, H * HF_THIN
+    def xspan(a, b):
+        bb = mask.crop((0, a, W, b)).getbbox()
+        return bb[0], bb[2]
+
+    def edge_cand(b):
+        return b[1] - b[0] < thin and (b[0] < edge or b[1] > H - edge)
+
+    core = [b for b in bands if not edge_cand(b)]
+    if core:
+        cx0, cx1 = xspan(core[0][0], core[-1][1])
+
+        def is_hf(b):
+            # thin, at the page edge, and running out past the label's columns
+            # (header/footer text reaches the page margins; a label's own
+            # heading such as "Ship To:" stays inside the label)
+            bx0, bx1 = xspan(*b)
+            return edge_cand(b) and (bx0 < cx0 - HF_GAP_PX or bx1 > cx1 + HF_GAP_PX)
+
+        while len(bands) > 1 and bands[0][0] < edge and is_hf(bands[0]):
+            bands.pop(0)
+        while len(bands) > 1 and bands[-1][1] > H - edge and is_hf(bands[-1]):
+            bands.pop()
+    top, bot = bands[0][0], bands[-1][1]
+    if (top, bot) != (bbox[1], bbox[3]):
+        log("DEBUG", f"ignored header/footer outside rows {top}-{bot}")
+        sub = mask.crop((0, top, W, bot)).getbbox()
+        bbox = (sub[0], top + sub[1], sub[2], top + sub[3])
+    return bbox, img.size
 
 
 def main(argv):
@@ -108,7 +169,8 @@ def main(argv):
             for i, page in enumerate(reader.pages, start=1):
                 box = page.cropbox
                 W, H = float(box.width), float(box.height)
-                if page.rotation % 360 or not has_icarry_text(src, i):
+                kind = None if page.rotation % 360 else page_kind(src, i)
+                if kind is None:
                     writer.add_page(page)
                     continue
                 bbox, (pw, ph) = content_bbox(src, i, tmpdir)
@@ -118,7 +180,8 @@ def main(argv):
                 # iCarry A4 as downloaded, or already shrunk onto the label by the
                 # sending OS (Windows/iOS do this) so it covers only part of the page.
                 fill = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1]) / (pw * ph)
-                if not (is_a4_like(W, H) or fill < SHRUNK_FILL):
+                # Text-less pages are only touched when clearly shrunk (< 50% filled).
+                if not (fill < SHRUNK_FILL or (kind == "icarry" and is_a4_like(W, H))):
                     writer.add_page(page)
                     continue
                 sx, sy = W / pw, H / ph
@@ -146,7 +209,7 @@ def main(argv):
                         del page[k]
                 writer.add_page(page)
                 changed += 1
-                log("INFO", f"page {i}: iCarry label detected - cropped {cw:.0f}x{ch:.0f}pt, "
+                log("INFO", f"page {i}: iCarry label detected ({kind}) - cropped {cw:.0f}x{ch:.0f}pt, "
                             f"{'rotated, ' if rotate else ''}scaled x{s:.2f} onto {LW:.0f}x{LH:.0f}pt")
 
             if not changed:
